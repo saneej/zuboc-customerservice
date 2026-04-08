@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Ticket, 
   Clock, 
@@ -8,7 +8,8 @@ import {
   Users,
   MessageSquare,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Loader2
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -23,25 +24,79 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-
-const data = [
-  { name: 'Mon', tickets: 45, resolved: 38 },
-  { name: 'Tue', tickets: 52, resolved: 48 },
-  { name: 'Wed', tickets: 38, resolved: 42 },
-  { name: 'Thu', tickets: 65, resolved: 55 },
-  { name: 'Fri', tickets: 48, resolved: 50 },
-  { name: 'Sat', tickets: 24, resolved: 20 },
-  { name: 'Sun', tickets: 18, resolved: 15 },
-];
-
-const stats = [
-  { label: 'Open Tickets', value: '128', change: '+12%', trend: 'up', icon: Ticket, color: 'text-blue-600', bg: 'bg-blue-50' },
-  { label: 'Pending', value: '45', change: '-5%', trend: 'down', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-  { label: 'Resolved Today', value: '32', change: '+8%', trend: 'up', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { label: 'SLA Breaches', value: '3', change: '-20%', trend: 'down', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
-];
+import { supabase } from '../lib/supabase';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState([
+    { label: 'Open Tickets', value: '0', change: '0%', trend: 'up', icon: Ticket, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Pending', value: '0', change: '0%', trend: 'down', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Resolved Today', value: '0', change: '0%', trend: 'up', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'SLA Breaches', value: '0', change: '0%', trend: 'down', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+  ]);
+  const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Fetch stats
+      const { data: tickets, error } = await supabase.from('tickets').select('status, created_at');
+      if (error) throw error;
+
+      const openCount = tickets.filter(t => t.status === 'open' || t.status === 'new').length;
+      const pendingCount = tickets.filter(t => t.status === 'pending').length;
+      const resolvedToday = tickets.filter(t => {
+        const today = new Date().toISOString().split('T')[0];
+        return t.status === 'resolved' && t.created_at.startsWith(today);
+      }).length;
+
+      setStats([
+        { label: 'Open Tickets', value: openCount.toString(), change: '+0%', trend: 'up', icon: Ticket, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'Pending', value: pendingCount.toString(), change: '0%', trend: 'down', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+        { label: 'Resolved Today', value: resolvedToday.toString(), change: '+0%', trend: 'up', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: 'SLA Breaches', value: '0', change: '0%', trend: 'down', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+      ]);
+
+      // Generate chart data (last 7 days)
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return {
+          name: days[d.getDay()],
+          date: d.toISOString().split('T')[0],
+          tickets: 0,
+          resolved: 0
+        };
+      });
+
+      tickets.forEach(t => {
+        const ticketDate = t.created_at.split('T')[0];
+        const day = last7Days.find(d => d.date === ticketDate);
+        if (day) {
+          day.tickets++;
+          if (t.status === 'resolved') day.resolved++;
+        }
+      });
+
+      setChartData(last7Days);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-zuboc-plum/20 mb-4" />
+        <p className="text-zuboc-plum/40 font-light">Loading dashboard data...</p>
+      </div>
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -53,7 +108,7 @@ export default function Dashboard() {
           <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
             Export Report
           </button>
-          <button className="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-medium text-white hover:bg-indigo-700 transition-colors shadow-sm">
+          <button className="px-4 py-2 bg-zuboc-plum rounded-lg text-sm font-medium text-white hover:bg-zuboc-plum/90 transition-colors shadow-sm">
             New Ticket
           </button>
         </div>
@@ -93,7 +148,7 @@ export default function Dashboard() {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>

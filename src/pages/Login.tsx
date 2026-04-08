@@ -133,26 +133,6 @@ export default function Login() {
               </button>
             </div>
           </form>
-
-          <div className="mt-10">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zuboc-plum/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold">
-                <span className="px-4 bg-white text-zuboc-plum/30">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <button
-                className="zuboc-button-secondary w-full flex justify-center items-center"
-              >
-                <img className="h-5 w-5 mr-3" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" />
-                <span>Sign in with Google</span>
-              </button>
-            </div>
-          </div>
         </div>
         
         <p className="mt-10 text-center text-sm text-zuboc-plum/60 font-light">

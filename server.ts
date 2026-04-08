@@ -22,10 +22,21 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Logging middleware for API routes
+  app.use("/api", (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.url}`);
+    next();
+  });
+
   // API Route for Ticket Creation and Email
   app.post("/api/tickets", async (req, res) => {
+    console.log("Received ticket creation request:", req.body);
     try {
       const { subject, description, customer_email, query_type, workspace_id, priority, source } = req.body;
+
+      if (!subject || !customer_email) {
+        return res.status(400).json({ error: "Subject and customer email are required" });
+      }
 
       // 1. Generate Ticket Number (ZUBXXXX)
       // Get count of existing tickets to generate next number
@@ -45,13 +56,13 @@ async function startServer() {
           {
             title: subject,
             description,
-            customer_email,
-            query_type,
             workspace_id,
             status: "open",
             priority: priority || "medium",
+            ticket_number: ticketNumber,
             metadata: { 
-              ticket_number: ticketNumber,
+              customer_email,
+              query_type,
               source: source || "web" 
             }
           },

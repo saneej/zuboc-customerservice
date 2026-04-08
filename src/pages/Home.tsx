@@ -68,8 +68,7 @@ export default function Home() {
       let query = supabase.from('tickets').select('*');
       
       if (ticketId.startsWith('ZUB')) {
-        // Correct way to query JSONB in Supabase
-        query = query.contains('metadata', { ticket_number: ticketId });
+        query = query.eq('ticket_number', ticketId);
       } else {
         query = query.eq('id', ticketId);
       }

@@ -332,7 +332,7 @@ export default function Tickets() {
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold text-slate-900 group-hover:text-zuboc-plum transition-colors">
-                      #{ticket.metadata?.ticket_number || ticket.id.slice(0, 8)} {ticket.title}
+                      #{ticket.ticket_number || ticket.id.slice(0, 8)} {ticket.title}
                     </span>
                     <div className="flex items-center mt-1 text-xs text-slate-500">
                       <Clock className="w-3 h-3 mr-1" />
@@ -350,7 +350,7 @@ export default function Tickets() {
                     <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center mr-3">
                       <UserIcon className="w-4 h-4 text-slate-400" />
                     </div>
-                    <span className="text-sm text-slate-700">{ticket.customer_email}</span>
+                    <span className="text-sm text-slate-700">{ticket.metadata?.customer_email || 'No Email'}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
