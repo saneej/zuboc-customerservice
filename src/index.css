@@ -1,1 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Montserrat:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  
+  --color-zuboc-plum: #5B4B51;
+  --color-zuboc-cream: #F5F2ED;
+  --color-zuboc-gold: #D4AF37;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-zuboc-plum bg-zuboc-cream;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.zuboc-gradient {
+  background: linear-gradient(135deg, #5B4B51 0%, #7A6A70 100%);
+}
+
+.zuboc-card {
+  @apply bg-white rounded-3xl border border-zuboc-plum/5 shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+.zuboc-input {
+  @apply w-full px-4 py-3 bg-white border border-zuboc-plum/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-zuboc-plum/10 focus:border-zuboc-plum transition-all;
+}
+
+.zuboc-button-primary {
+  @apply px-6 py-3 bg-zuboc-plum text-white rounded-xl font-medium hover:bg-zuboc-plum/90 transition-all shadow-sm active:scale-[0.98];
+}
+
+.zuboc-button-secondary {
+  @apply px-6 py-3 bg-white text-zuboc-plum border border-zuboc-plum/20 rounded-xl font-medium hover:bg-zuboc-cream transition-all active:scale-[0.98];
+}
