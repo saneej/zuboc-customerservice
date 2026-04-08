@@ -63,21 +63,22 @@ export default function Home() {
     setStatus(null);
 
     try {
-      // In a real app, we'd query Supabase for a ticket with this ID and Email
-      // For now, we'll simulate a search
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('id', ticketId)
-        .single();
+      // Search by ID or Ticket Number in metadata
+      let query = supabase.from('tickets').select('*');
+      
+      if (ticketId.startsWith('ZUB')) {
+        query = query.filter('metadata->>ticket_number', 'eq', ticketId);
+      } else {
+        query = query.eq('id', ticketId);
+      }
+
+      const { data, error } = await query.single();
 
       if (error || !data) {
         throw new Error('Ticket not found. Please check your ID and try again.');
       }
 
-      // If found, we could navigate to a public ticket view
-      // navigate(`/public/tickets/${ticketId}`);
-      setStatus({ type: 'success', message: `Ticket #${ticketId} found! Status: ${data.status.toUpperCase()}` });
+      setStatus({ type: 'success', message: `Ticket ${ticketId} found! Status: ${data.status.toUpperCase()}` });
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message });
     } finally {
@@ -97,46 +98,43 @@ export default function Home() {
     setStatus(null);
 
     try {
-      // 1. Create/Find customer based on email (simplified for demo)
-      // 2. Insert ticket
-      
-      // Try to get the first workspace if the default one fails
+      // Fetch workspace ID
       let workspaceId = '00000000-0000-0000-0000-000000000000';
       const { data: workspaces } = await supabase.from('workspaces').select('id').limit(1);
       if (workspaces && workspaces.length > 0) {
         workspaceId = workspaces[0].id;
       }
 
-      const { data, error } = await supabase
-        .from('tickets')
-        .insert([{
-          title: formData.subject,
+      // Call our backend API to handle ticket creation and email
+      const response = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: formData.subject,
           description: formData.message,
-          priority: formData.priority,
-          status: 'new',
+          customer_email: formData.email,
+          query_type: formData.queryType,
           workspace_id: workspaceId,
-        }])
-        .select()
-        .single();
+          priority: formData.priority
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to raise ticket');
+      }
 
       setStatus({ 
         type: 'success', 
-        message: `Your ticket has been raised successfully! Your Token Number is #${data.id.slice(0, 8)}. Please save this for tracking.` 
+        message: `Your ticket has been raised successfully! Your Token Number is #${result.ticket.ticket_number}. A confirmation email has been sent to ${formData.email}.` 
       });
-      setFormData({ name: '', email: '', subject: '', message: '', priority: 'medium' });
+      setFormData({ name: '', email: '', subject: '', message: '', priority: 'medium', queryType: 'order' });
       generateCaptcha();
     } catch (err: any) {
-      // If RLS fails, we'll show a friendly message for the demo
-      if (err.message.includes('permission denied')) {
-        setStatus({ 
-          type: 'success', 
-          message: 'Demo Mode: Ticket created successfully! (Simulated). Your Token Number is #ZB-' + Math.floor(1000 + Math.random() * 9000) 
-        });
-      } else {
-        setStatus({ type: 'error', message: err.message });
-      }
+      setStatus({ type: 'error', message: err.message });
     } finally {
       setLoading(false);
     }
