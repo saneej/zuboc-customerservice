@@ -1,0 +1,38 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase credentials missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your secrets.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'agent' | 'viewer' | 'customer';
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: UserRole;
+  workspace_id: string | null;
+  created_at: string;
+}
+
+export interface Ticket {
+  id: string;
+  title: string;
+  description: string;
+  status: 'new' | 'open' | 'pending' | 'on_hold' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  customer_id: string;
+  assigned_to: string | null;
+  team_id: string | null;
+  workspace_id: string;
+  created_at: string;
+  updated_at: string;
+  due_date: string | null;
+  tags: string[];
+}
