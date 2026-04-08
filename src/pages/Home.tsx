@@ -148,7 +148,6 @@ export default function Home() {
                 className="h-8 w-auto"
                 referrerPolicy="no-referrer"
               />
-              <span className="ml-2 text-xl font-bold text-slate-900 tracking-tight">Zuboc</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
@@ -444,7 +443,6 @@ export default function Home() {
               className="h-6 w-auto opacity-50"
               referrerPolicy="no-referrer"
             />
-            <span className="ml-2 text-slate-400 font-bold tracking-tight">Zuboc</span>
           </div>
           <p className="text-slate-400 text-sm">
             &copy; {new Date().getFullYear()} Zuboc Customer Service. All rights reserved.

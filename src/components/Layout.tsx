@@ -57,9 +57,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 referrerPolicy="no-referrer"
               />
             </div>
-            {isSidebarOpen && (
-              <span className="ml-3 text-white font-semibold text-lg tracking-tight">Zuboc</span>
-            )}
           </div>
 
           {/* Nav */}

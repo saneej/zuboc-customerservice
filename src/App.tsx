@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import { Toaster } from 'sonner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -33,65 +34,67 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tickets"
-            element={
-              <ProtectedRoute>
-                <Tickets />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tickets/:id"
-            element={
-              <ProtectedRoute>
-                <TicketDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/kb"
-            element={
-              <ProtectedRoute>
-                <KnowledgeBase />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/customers"
-            element={
-              <ProtectedRoute>
-                <Customers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Router>
-      <Toaster position="top-right" richColors />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets"
+              element={
+                <ProtectedRoute>
+                  <Tickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets/:id"
+              element={
+                <ProtectedRoute>
+                  <TicketDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/kb"
+              element={
+                <ProtectedRoute>
+                  <KnowledgeBase />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                <ProtectedRoute>
+                  <Customers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Router>
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
