@@ -72,6 +72,10 @@ CREATE TABLE tickets (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
+  ticket_number TEXT UNIQUE,
+  customer_email TEXT,
+  query_type TEXT,
+  source TEXT,
   title TEXT NOT NULL,
   description TEXT,
   status ticket_status DEFAULT 'new',
@@ -79,6 +83,7 @@ CREATE TABLE tickets (
   assigned_to UUID REFERENCES profiles(id),
   team_id UUID REFERENCES teams(id),
   tags TEXT[] DEFAULT '{}',
+  metadata JSONB DEFAULT '{}',
   due_date TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

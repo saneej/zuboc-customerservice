@@ -22,9 +22,9 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Logging middleware for API routes
-  app.use("/api", (req, res, next) => {
-    console.log(`[API] ${req.method} ${req.url}`);
+  // Logging middleware for ALL routes
+  app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.url}`);
     next();
   });
 
@@ -60,10 +60,12 @@ async function startServer() {
             status: "open",
             priority: priority || "medium",
             ticket_number: ticketNumber,
+            customer_email,
+            query_type,
+            source: source || "web",
             metadata: { 
-              customer_email,
-              query_type,
-              source: source || "web" 
+              // Keep metadata for any additional flexible fields
+              created_via: "api"
             }
           },
         ])

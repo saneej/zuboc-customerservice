@@ -97,6 +97,9 @@ export default function Dashboard() {
         <Loader2 className="w-12 h-12 animate-spin text-zuboc-plum/20 mb-4" />
         <p className="text-zuboc-plum/40 font-light">Loading dashboard data...</p>
       </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">

@@ -80,7 +80,7 @@ export default function Home() {
       }
 
       // Navigate to the permanent tracking link
-      const token = data.metadata?.ticket_number || data.id;
+      const token = data.ticket_number || data.id;
       navigate(`/track/${token}`);
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message });

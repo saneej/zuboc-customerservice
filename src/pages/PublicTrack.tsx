@@ -29,12 +29,12 @@ export default function PublicTrack() {
     setError(null);
 
     try {
-      // Search by Ticket Number and verify email in metadata
+      // Search by Ticket Number and verify email
       const { data, error: fetchError } = await supabase
         .from('tickets')
         .select('*')
         .eq('ticket_number', token)
-        .contains('metadata', { customer_email: email.toLowerCase().trim() })
+        .eq('customer_email', email.toLowerCase().trim())
         .single();
 
       if (fetchError || !data) {
