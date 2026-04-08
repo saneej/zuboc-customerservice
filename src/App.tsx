@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
+import PublicTrack from './pages/PublicTrack';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
 import KnowledgeBase from './pages/KnowledgeBase';
@@ -39,6 +40,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/track/:token" element={<PublicTrack />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route

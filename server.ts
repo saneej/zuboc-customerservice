@@ -25,7 +25,7 @@ async function startServer() {
   // API Route for Ticket Creation and Email
   app.post("/api/tickets", async (req, res) => {
     try {
-      const { subject, description, customer_email, query_type, workspace_id, priority } = req.body;
+      const { subject, description, customer_email, query_type, workspace_id, priority, source } = req.body;
 
       // 1. Generate Ticket Number (ZUBXXXX)
       // Get count of existing tickets to generate next number
@@ -50,7 +50,10 @@ async function startServer() {
             workspace_id,
             status: "open",
             priority: priority || "medium",
-            metadata: { ticket_number: ticketNumber }
+            metadata: { 
+              ticket_number: ticketNumber,
+              source: source || "web" 
+            }
           },
         ])
         .select()
@@ -69,6 +72,8 @@ async function startServer() {
         },
       });
 
+      const trackingUrl = `${req.protocol}://${req.get('host')}/track/${ticketNumber}`;
+
       const htmlTemplate = `
         <!DOCTYPE html>
         <html>
@@ -86,6 +91,7 @@ async function startServer() {
             .details { background-color: #FDFBF7; padding: 20px; border-radius: 16px; margin-top: 20px; }
             .details-item { margin-bottom: 10px; font-size: 14px; }
             .details-label { font-weight: bold; color: rgba(49, 33, 49, 0.6); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
+            .button { background-color: #312131; color: #ffffff !important; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 20px; }
           </style>
         </head>
         <body>
@@ -108,9 +114,14 @@ async function startServer() {
                   <div class="details-label">Query Type</div>
                   <div>${query_type}</div>
                 </div>
+                <div class="details-item">
+                  <div class="details-label">Source</div>
+                  <div>${source || 'Web'}</div>
+                </div>
               </div>
               
-              <p style="margin-top: 30px;">You can track your ticket status on our website using your email address.</p>
+              <p style="margin-top: 30px;">You can track your ticket status by clicking the button below:</p>
+              <a href="${trackingUrl}" class="button">Track My Ticket</a>
             </div>
             <div class="footer">
               &copy; ${new Date().getFullYear()} Zuboc Desk. All rights reserved.

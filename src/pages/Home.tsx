@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -67,7 +68,8 @@ export default function Home() {
       let query = supabase.from('tickets').select('*');
       
       if (ticketId.startsWith('ZUB')) {
-        query = query.filter('metadata->>ticket_number', 'eq', ticketId);
+        // Correct way to query JSONB in Supabase
+        query = query.contains('metadata', { ticket_number: ticketId });
       } else {
         query = query.eq('id', ticketId);
       }
@@ -78,7 +80,9 @@ export default function Home() {
         throw new Error('Ticket not found. Please check your ID and try again.');
       }
 
-      setStatus({ type: 'success', message: `Ticket ${ticketId} found! Status: ${data.status.toUpperCase()}` });
+      // Navigate to the permanent tracking link
+      const token = data.metadata?.ticket_number || data.id;
+      navigate(`/track/${token}`);
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message });
     } finally {
@@ -127,9 +131,11 @@ export default function Home() {
         throw new Error(result.error || 'Failed to raise ticket');
       }
 
+      const trackingUrl = `${window.location.origin}/track/${result.ticket.ticket_number}`;
+
       setStatus({ 
         type: 'success', 
-        message: `Your ticket has been raised successfully! Your Token Number is #${result.ticket.ticket_number}. A confirmation email has been sent to ${formData.email}.` 
+        message: `Your ticket has been raised successfully! Your Token Number is #${result.ticket.ticket_number}. A confirmation email has been sent to ${formData.email}. You can track it here: ${trackingUrl}` 
       });
       setFormData({ name: '', email: '', subject: '', message: '', priority: 'medium', queryType: 'order' });
       generateCaptcha();
@@ -155,6 +161,15 @@ export default function Home() {
               />
             </div>
             <div className="flex items-center space-x-6">
+              <a 
+                href="https://www.zuboc.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-zuboc-plum/70 hover:text-zuboc-plum transition-colors flex items-center"
+              >
+                Go to Website
+                <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+              </a>
               <Link to="/login" className="text-sm font-medium text-zuboc-plum/70 hover:text-zuboc-plum transition-colors">
                 Agent Login
               </Link>
