@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Clock, 
@@ -16,26 +16,36 @@ import {
   Globe,
   Loader2,
   ExternalLink,
-  Plus
+  Plus,
+  MessageSquare
 } from 'lucide-react';
-import { supabase, Ticket } from '../lib/supabase';
+import { supabase, Ticket, Profile } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function TicketDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { profile: currentUserProfile } = useAuth();
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [agents, setAgents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState('');
   const [isInternal, setIsInternal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (id) fetchTicket();
+    if (id) {
+      fetchTicket();
+      fetchMessages();
+      fetchAgents();
+    }
   }, [id]);
 
   async function fetchTicket() {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('tickets')
         .select('*')
@@ -46,11 +56,115 @@ export default function TicketDetail() {
       setTicket(data);
     } catch (error: any) {
       toast.error('Failed to fetch ticket details');
-      console.error(error);
     } finally {
       setLoading(false);
     }
   }
+
+  async function fetchMessages() {
+    try {
+      const { data, error } = await supabase
+        .from('ticket_messages')
+        .select(`
+          *,
+          author:profiles(full_name, avatar_url, email)
+        `)
+        .eq('ticket_id', id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error: any) {
+      console.error('Error fetching messages:', error);
+    }
+  }
+
+  async function fetchAgents() {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('role', ['admin', 'agent', 'manager']);
+
+      if (error) throw error;
+      setAgents(data || []);
+    } catch (error: any) {
+      console.error('Error fetching agents:', error);
+    }
+  }
+
+  const handleSendReply = async () => {
+    if (!reply.trim()) return;
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('ticket_messages')
+        .insert([
+          {
+            ticket_id: id,
+            author_id: currentUserProfile?.id,
+            body: reply,
+            is_internal: isInternal
+          }
+        ]);
+
+      if (error) throw error;
+
+      setReply('');
+      fetchMessages();
+      toast.success(isInternal ? 'Internal note added' : 'Reply sent');
+    } catch (error: any) {
+      toast.error('Failed to send reply');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateTicketStatus = async (status: string) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw error;
+      setTicket(prev => prev ? { ...prev, status: status as any } : null);
+      toast.success(`Ticket marked as ${status}`);
+    } catch (error: any) {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const updateTicketPriority = async (priority: string) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ priority })
+        .eq('id', id);
+
+      if (error) throw error;
+      setTicket(prev => prev ? { ...prev, priority: priority as any } : null);
+      toast.success(`Priority updated to ${priority}`);
+    } catch (error: any) {
+      toast.error('Failed to update priority');
+    }
+  };
+
+  const updateTicketAssignee = async (assignedTo: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ assigned_to: assignedTo })
+        .eq('id', id);
+
+      if (error) throw error;
+      setTicket(prev => prev ? { ...prev, assigned_to: assignedTo } : null);
+      toast.success(assignedTo ? 'Ticket assigned' : 'Ticket unassigned');
+    } catch (error: any) {
+      toast.error('Failed to update assignee');
+    }
+  };
 
   if (loading) {
     return (
@@ -93,9 +207,21 @@ export default function TicketDetail() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            Resolve
-          </button>
+          {ticket.status !== 'resolved' && ticket.status !== 'closed' ? (
+            <button 
+              onClick={() => updateTicketStatus('resolved')}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+            >
+              Resolve
+            </button>
+          ) : (
+            <button 
+              onClick={() => updateTicketStatus('open')}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Reopen
+            </button>
+          )}
           <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
             <MoreHorizontal className="w-5 h-5" />
           </button>
@@ -154,13 +280,48 @@ export default function TicketDetail() {
               </div>
             </div>
 
-            {/* Placeholder for replies - in a real app these would be fetched from ticket_messages */}
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <History className="w-6 h-6" />
+            {/* Messages */}
+            {messages.map((msg) => (
+              <div key={msg.id} className={cn(
+                "flex space-x-4 max-w-4xl",
+                msg.is_internal ? "bg-amber-50/50 p-4 rounded-xl border border-amber-100" : ""
+              )}>
+                <div className="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                  {msg.author?.avatar_url ? (
+                    <img src={msg.author.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className="w-6 h-6 text-slate-400" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-slate-900">{msg.author?.full_name || msg.author?.email || 'System'}</span>
+                      {msg.is_internal && (
+                        <span className="flex items-center text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                          <Lock className="w-3 h-3 mr-1" /> Internal Note
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-400">{new Date(msg.created_at).toLocaleString()}</span>
+                  </div>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      {msg.body}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm">No replies yet. Start the conversation below.</p>
-            </div>
+            ))}
+
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <p className="text-sm">No replies yet. Start the conversation below.</p>
+              </div>
+            )}
           </div>
 
           {/* Reply Area */}
@@ -205,13 +366,18 @@ export default function TicketDetail() {
                       <TagIcon className="w-5 h-5" />
                     </button>
                   </div>
-                  <button className={cn(
-                    "flex items-center px-4 py-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all",
-                    isInternal ? "bg-amber-600 hover:bg-amber-700" : "bg-zuboc-plum hover:bg-zuboc-plum/90"
-                  )}>
-                    <Send className="w-4 h-4 mr-2" />
-                    {isInternal ? 'Add Note' : 'Send Reply'}
-                  </button>
+                    <button 
+                      onClick={handleSendReply}
+                      disabled={isSubmitting || !reply.trim()}
+                      className={cn(
+                        "flex items-center px-4 py-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all",
+                        isInternal ? "bg-amber-600 hover:bg-amber-700" : "bg-zuboc-plum hover:bg-zuboc-plum/90",
+                        (isSubmitting || !reply.trim()) && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                      {isInternal ? 'Add Note' : 'Send Reply'}
+                    </button>
                 </div>
               </div>
             </div>
@@ -244,16 +410,34 @@ export default function TicketDetail() {
           </div>
 
           <div>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {ticket.tags?.map((tag) => (
-                <span key={tag} className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">
-                  {tag}
-                </span>
-              ))}
-              <button className="px-2 py-1 border border-dashed border-slate-300 text-slate-400 rounded text-[10px] font-bold uppercase tracking-wider hover:border-slate-400 hover:text-slate-500 transition-colors">
-                <Plus className="w-3 h-3" />
-              </button>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Properties</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Assignee</label>
+                <select 
+                  value={ticket.assigned_to || ''}
+                  onChange={(e) => updateTicketAssignee(e.target.value || null)}
+                  className="w-full text-sm border-slate-200 rounded-lg focus:ring-zuboc-plum/20 outline-none"
+                >
+                  <option value="">Unassigned</option>
+                  {agents.map(agent => (
+                    <option key={agent.id} value={agent.id}>{agent.full_name || agent.email}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Priority</label>
+                <select 
+                  value={ticket.priority}
+                  onChange={(e) => updateTicketPriority(e.target.value)}
+                  className="w-full text-sm border-slate-200 rounded-lg focus:ring-zuboc-plum/20 outline-none"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>

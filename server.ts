@@ -75,7 +75,16 @@ async function startServer() {
 
       if (insertError) throw insertError;
 
-      // 3. Send Email
+      // 3. Fetch Sender Email from Workspace Settings
+      const { data: workspace, error: workspaceError } = await supabase
+        .from("workspaces")
+        .select("settings")
+        .eq("id", workspace_id)
+        .single();
+
+      const senderEmail = workspace?.settings?.sender_email || "hello@demomailtrap.co";
+
+      // 4. Send Email
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || "smtp.ethereal.email",
         port: Number(process.env.SMTP_PORT) || 587,
@@ -146,7 +155,7 @@ async function startServer() {
       `;
 
       await transporter.sendMail({
-        from: '"Zuboc Desk" <hello@demomailtrap.co>',
+        from: `"Zuboc Desk" <${senderEmail}>`,
         to: customer_email,
         subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
         html: htmlTemplate,

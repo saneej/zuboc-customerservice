@@ -158,3 +158,19 @@ CREATE POLICY "Ticket Access" ON tickets
 ALTER PUBLICATION supabase_realtime ADD TABLE tickets;
 ALTER PUBLICATION supabase_realtime ADD TABLE ticket_messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+-- 6. Storage Setup
+-- Create the bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('attachments', 'attachments', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Allow public access to read attachments
+CREATE POLICY "Public Access"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'attachments' );
+
+-- Allow authenticated users to upload attachments
+CREATE POLICY "Authenticated Upload"
+ON storage.objects FOR INSERT
+WITH CHECK ( bucket_id = 'attachments' );

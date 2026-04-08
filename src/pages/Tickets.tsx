@@ -40,6 +40,8 @@ export default function Tickets() {
   const [loading, setLoading] = useState(false);
   const [tickets, setTickets] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Tickets');
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -71,6 +73,21 @@ export default function Tickets() {
       setFetching(false);
     }
   };
+
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = 
+      ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.ticket_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = 
+      statusFilter === 'All Tickets' || 
+      (statusFilter === 'My Tickets' && ticket.assigned_to === 'current_user_id') || // Placeholder for current user
+      (statusFilter === 'Unassigned' && !ticket.assigned_to) ||
+      (statusFilter.toLowerCase() === ticket.status.toLowerCase());
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,6 +278,8 @@ export default function Tickets() {
             <input 
               type="text" 
               placeholder="Search tickets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             />
           </div>
@@ -289,11 +308,17 @@ export default function Tickets() {
               Kanban
             </button>
           </div>
-          <select className="text-sm border-slate-200 bg-white rounded-lg px-3 py-2 text-slate-600 focus:ring-indigo-500">
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-sm border-slate-200 bg-white rounded-lg px-3 py-2 text-slate-600 focus:ring-indigo-500 outline-none"
+          >
             <option>All Tickets</option>
-            <option>My Tickets</option>
             <option>Unassigned</option>
-            <option>Recently Updated</option>
+            <option value="open">Open</option>
+            <option value="pending">Pending</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
           </select>
         </div>
       </div>
@@ -318,13 +343,13 @@ export default function Tickets() {
                   <p className="text-slate-400 text-sm">Loading tickets...</p>
                 </td>
               </tr>
-            ) : tickets.length === 0 ? (
+            ) : filteredTickets.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center">
                   <p className="text-slate-400 text-sm">No tickets found.</p>
                 </td>
               </tr>
-            ) : tickets.map((ticket) => (
+            ) : filteredTickets.map((ticket) => (
               <tr 
                 key={ticket.id} 
                 onClick={() => navigate(`/tickets/${ticket.id}`)}

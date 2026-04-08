@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Ticket, 
   Clock, 
@@ -35,10 +36,33 @@ export default function Dashboard() {
   ]);
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchRecentActivity();
   }, []);
+
+  const fetchRecentActivity = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ticket_messages')
+        .select(`
+          id,
+          body,
+          created_at,
+          ticket:tickets(ticket_number, title),
+          author:profiles(full_name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setRecentActivity(data || []);
+    } catch (err) {
+      console.error('Error fetching activity:', err);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -190,23 +214,30 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-900 mb-6">Recent Activity</h3>
           <div className="space-y-6">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex space-x-4">
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-slate-400" />
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity) => (
+                <div key={activity.id} className="flex space-x-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-900">
+                      <span className="font-medium">{activity.author?.full_name || 'System'}</span> replied to <span className="text-indigo-600 font-medium">#{activity.ticket?.ticket_number || 'Ticket'}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">{activity.body.substring(0, 50)}...</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{new Date(activity.created_at).toLocaleString()}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-900">
-                    <span className="font-medium">Sarah Miller</span> replied to <span className="text-indigo-600 font-medium">#4521</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">2 minutes ago</p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-slate-400">No recent activity</p>
               </div>
-            ))}
+            )}
           </div>
-          <button className="w-full mt-8 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-            View All Activity
-          </button>
+          <Link to="/tickets" className="block w-full mt-8 py-2 text-center text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+            View All Tickets
+          </Link>
         </div>
       </div>
     </div>
