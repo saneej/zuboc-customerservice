@@ -32,7 +32,7 @@ async function startServer() {
   app.post("/api/tickets", async (req, res) => {
     console.log("Received ticket creation request:", req.body);
     try {
-      const { subject, description, customer_email, query_type, workspace_id, priority, source } = req.body;
+      const { subject, description, customer_email, query_type, workspace_id, priority, source, attachments } = req.body;
 
       if (!subject || !customer_email) {
         return res.status(400).json({ error: "Subject and customer email are required" });
@@ -63,6 +63,7 @@ async function startServer() {
             customer_email,
             query_type,
             source: source || "web",
+            attachments: attachments || [],
             metadata: { 
               // Keep metadata for any additional flexible fields
               created_via: "api"
@@ -85,7 +86,7 @@ async function startServer() {
         },
       });
 
-      const trackingUrl = `${req.protocol}://${req.get('host')}/track/${ticketNumber}`;
+      const trackingUrl = `https://zuboc-customerservice.vercel.app/track/${ticketNumber}`;
 
       const htmlTemplate = `
         <!DOCTYPE html>

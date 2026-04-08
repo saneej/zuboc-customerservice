@@ -84,6 +84,7 @@ CREATE TABLE tickets (
   team_id UUID REFERENCES teams(id),
   tags TEXT[] DEFAULT '{}',
   metadata JSONB DEFAULT '{}',
+  attachments TEXT[] DEFAULT '{}',
   due_date TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -50,6 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
+      
+      // Bootstrap default admin if email matches
+      if (data.email === 'msaneejk4@gmail.com' && data.role !== 'admin') {
+        const { data: updatedData } = await supabase
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('id', userId)
+          .select()
+          .single();
+        if (updatedData) {
+          setProfile(updatedData);
+          return;
+        }
+      }
+      
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);

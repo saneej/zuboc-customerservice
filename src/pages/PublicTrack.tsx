@@ -9,7 +9,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Loader2,
-  MessageSquare
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -142,6 +143,33 @@ export default function PublicTrack() {
                   {ticket.description}
                 </div>
               </div>
+
+              {ticket.attachments && ticket.attachments.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-zuboc-plum/60 uppercase tracking-widest mb-4">Attachments</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {ticket.attachments.map((url: string, idx: number) => (
+                      <a 
+                        key={idx} 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="group relative aspect-square rounded-2xl overflow-hidden border border-zuboc-plum/5 hover:border-zuboc-plum/20 transition-all"
+                      >
+                        <img 
+                          src={url} 
+                          alt={`Attachment ${idx + 1}`} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-zuboc-plum/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ExternalLink className="w-6 h-6 text-white" />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>

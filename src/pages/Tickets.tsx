@@ -10,7 +10,8 @@ import {
   Tag as TagIcon,
   X,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Paperclip
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -340,6 +341,12 @@ export default function Tickets() {
                       {ticket.source && (
                         <span className="ml-2 px-1.5 py-0.5 bg-slate-100 rounded text-[10px] uppercase font-bold text-slate-500">
                           via {ticket.source}
+                        </span>
+                      )}
+                      {ticket.attachments && ticket.attachments.length > 0 && (
+                        <span className="ml-2 flex items-center text-slate-400">
+                          <Paperclip className="w-3 h-3" />
+                          <span className="ml-0.5">{ticket.attachments.length}</span>
                         </span>
                       )}
                     </div>

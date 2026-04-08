@@ -31,8 +31,14 @@ export interface Ticket {
   assigned_to: string | null;
   team_id: string | null;
   workspace_id: string;
+  ticket_number: string | null;
+  customer_email: string | null;
+  query_type: string | null;
+  source: string | null;
+  attachments: string[] | null;
   created_at: string;
   updated_at: string;
   due_date: string | null;
   tags: string[];
+  metadata: any;
 }

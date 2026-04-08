@@ -14,7 +14,10 @@ import {
   ExternalLink,
   X,
   Copy,
-  Check
+  Check,
+  Image as ImageIcon,
+  Paperclip,
+  Upload
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -45,6 +48,8 @@ export default function Home() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdTicket, setCreatedTicket] = useState<{ number: string, email: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   useEffect(() => {
     generateCaptcha();
@@ -107,6 +112,33 @@ export default function Home() {
     setStatus(null);
 
     try {
+      // 1. Upload files if any
+      const attachmentUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        setUploadingFiles(true);
+        for (const file of selectedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `public/${fileName}`;
+
+          const { error: uploadError, data } = await supabase.storage
+            .from('attachments')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(filePath);
+          
+          attachmentUrls.push(publicUrl);
+        }
+        setUploadingFiles(false);
+      }
+
       // Fetch workspace ID
       let workspaceId = '00000000-0000-0000-0000-000000000000';
       const { data: workspaces } = await supabase.from('workspaces').select('id').limit(1);
@@ -126,7 +158,8 @@ export default function Home() {
           customer_email: formData.email,
           query_type: formData.queryType,
           workspace_id: workspaceId,
-          priority: formData.priority
+          priority: formData.priority,
+          attachments: attachmentUrls
         }),
       });
 
@@ -140,6 +173,7 @@ export default function Home() {
       setShowSuccessModal(true);
       
       setFormData({ name: '', email: '', subject: '', message: '', priority: 'medium', queryType: 'order' });
+      setSelectedFiles([]);
       generateCaptcha();
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message });
@@ -402,6 +436,54 @@ export default function Home() {
                   />
                 </div>
 
+                {/* File Upload */}
+                <div>
+                  <label className="block text-xs font-semibold text-zuboc-plum/60 uppercase tracking-widest mb-3">Attachments (Optional)</label>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setSelectedFiles(Array.from(e.target.files));
+                        }
+                      }}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label 
+                      htmlFor="file-upload"
+                      className="flex items-center justify-center gap-3 w-full p-8 border-2 border-dashed border-zuboc-plum/10 rounded-3xl hover:border-zuboc-plum/30 hover:bg-zuboc-cream/30 transition-all cursor-pointer group"
+                    >
+                      <div className="w-12 h-12 bg-zuboc-cream rounded-2xl flex items-center justify-center text-zuboc-plum group-hover:scale-110 transition-transform">
+                        <Upload className="w-6 h-6" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-zuboc-plum">Click to upload images</p>
+                        <p className="text-xs text-zuboc-plum/40 font-light">PNG, JPG up to 5MB</p>
+                      </div>
+                    </label>
+                  </div>
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {selectedFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-zuboc-cream/50 px-4 py-2 rounded-xl border border-zuboc-plum/5 text-xs font-medium text-zuboc-plum">
+                          <ImageIcon className="w-3 h-3" />
+                          <span className="max-w-[150px] truncate">{file.name}</span>
+                          <button 
+                            type="button"
+                            onClick={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== idx))}
+                            className="p-1 hover:bg-zuboc-plum/10 rounded-full"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Robot Verification */}
                 <div className="bg-zuboc-cream/50 p-8 rounded-3xl border border-zuboc-plum/5">
                   <div className="flex items-center mb-6">
@@ -432,10 +514,15 @@ export default function Home() {
 
                 <button 
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || uploadingFiles}
                   className="zuboc-button-primary w-full py-5 text-lg flex items-center justify-center"
                 >
-                  {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                  {loading || uploadingFiles ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>{uploadingFiles ? 'Uploading files...' : 'Raising ticket...'}</span>
+                    </div>
+                  ) : (
                     <>
                       Submit Ticket
                       <ArrowRight className="w-5 h-5 ml-2" />

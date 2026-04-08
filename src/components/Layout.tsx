@@ -21,6 +21,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Ticket, label: 'Tickets', path: '/tickets' },
   { icon: Users, label: 'Customers', path: '/customers' },
+  { icon: Users, label: 'Team', path: '/team', adminOnly: true },
   { icon: BookOpen, label: 'Knowledge Base', path: '/kb' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: Settings, label: 'Settings', path: '/settings' },
@@ -31,6 +32,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
+  const filteredNavItems = navItems.filter(item => !item.adminOnly || profile?.role === 'admin');
 
   const handleSignOut = async () => {
     await signOut();
@@ -62,7 +65,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Nav */}
           <nav className="flex-1 py-8 px-3 space-y-2 overflow-y-auto">
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
