@@ -3,7 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import Tickets from './pages/Tickets';
+import TicketDetail from './pages/TicketDetail';
+import KnowledgeBase from './pages/KnowledgeBase';
+import Customers from './pages/Customers';
+import Settings from './pages/Settings';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import { Toaster } from 'sonner';
@@ -26,20 +31,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>;
 }
 
-import TicketDetail from './pages/TicketDetail';
-import KnowledgeBase from './pages/KnowledgeBase';
-import Customers from './pages/Customers';
-import Settings from './pages/Settings';
-
 export default function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />
