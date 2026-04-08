@@ -98,6 +98,14 @@ export default function Home() {
     try {
       // 1. Create/Find customer based on email (simplified for demo)
       // 2. Insert ticket
+      
+      // Try to get the first workspace if the default one fails
+      let workspaceId = '00000000-0000-0000-0000-000000000000';
+      const { data: workspaces } = await supabase.from('workspaces').select('id').limit(1);
+      if (workspaces && workspaces.length > 0) {
+        workspaceId = workspaces[0].id;
+      }
+
       const { data, error } = await supabase
         .from('tickets')
         .insert([{
@@ -105,9 +113,7 @@ export default function Home() {
           description: formData.message,
           priority: formData.priority,
           status: 'new',
-          // In a real flow, we'd need a valid workspace_id and customer_id
-          // This might fail due to RLS if not configured for public access
-          workspace_id: '00000000-0000-0000-0000-000000000000', // Placeholder
+          workspace_id: workspaceId,
         }])
         .select()
         .single();
