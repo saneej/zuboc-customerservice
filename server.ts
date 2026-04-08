@@ -145,7 +145,7 @@ async function startServer() {
       `;
 
       await transporter.sendMail({
-        from: '"Zuboc Desk" <support@zuboc.com>',
+        from: '"Zuboc Desk" <hello@demomailtrap.co>',
         to: customer_email,
         subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
         html: htmlTemplate,

@@ -11,7 +11,10 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  X,
+  Copy,
+  Check
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -39,6 +42,9 @@ export default function Home() {
   
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdTicket, setCreatedTicket] = useState<{ number: string, email: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     generateCaptcha();
@@ -130,12 +136,9 @@ export default function Home() {
         throw new Error(result.error || 'Failed to raise ticket');
       }
 
-      const trackingUrl = `${window.location.origin}/track/${result.ticket.ticket_number}`;
-
-      setStatus({ 
-        type: 'success', 
-        message: `Your ticket has been raised successfully! Your Token Number is #${result.ticket.ticket_number}. A confirmation email has been sent to ${formData.email}. You can track it here: ${trackingUrl}` 
-      });
+      setCreatedTicket({ number: result.ticket.ticket_number, email: formData.email });
+      setShowSuccessModal(true);
+      
       setFormData({ name: '', email: '', subject: '', message: '', priority: 'medium', queryType: 'order' });
       generateCaptcha();
     } catch (err: any) {
@@ -492,6 +495,67 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* Success Modal */}
+      {showSuccessModal && createdTicket && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zuboc-plum/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="relative p-10 text-center">
+              <button 
+                onClick={() => setShowSuccessModal(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-zuboc-cream rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-zuboc-plum/40" />
+              </button>
+
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+              </div>
+
+              <h2 className="text-3xl font-serif italic text-zuboc-plum mb-4">Token Raised!</h2>
+              <p className="text-zuboc-plum/60 font-light mb-8">
+                Your request has been registered successfully. A confirmation email has been sent to <span className="font-bold text-zuboc-plum">{createdTicket.email}</span>.
+              </p>
+
+              <div className="bg-zuboc-cream/50 p-6 rounded-3xl mb-8">
+                <p className="text-[10px] font-bold text-zuboc-plum/40 uppercase tracking-widest mb-2">Your Token Number</p>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-3xl font-mono font-bold text-zuboc-plum tracking-tighter">
+                    {createdTicket.number}
+                  </span>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdTicket.number);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="p-2 hover:bg-white rounded-xl transition-all active:scale-95"
+                    title="Copy to clipboard"
+                  >
+                    {copied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5 text-zuboc-plum/40" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <button 
+                  onClick={() => navigate(`/track/${createdTicket.number}`)}
+                  className="zuboc-button-primary w-full py-4 flex items-center justify-center gap-2"
+                >
+                  Track Status
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full py-4 text-sm font-bold text-zuboc-plum/60 hover:text-zuboc-plum transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
