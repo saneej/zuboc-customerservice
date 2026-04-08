@@ -112,6 +112,26 @@ export default function TicketDetail() {
 
       if (error) throw error;
 
+      // If public reply, send email notification via server
+      if (!isInternal && ticket) {
+        try {
+          await fetch('/api/notifications/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ticket_id: ticket.id,
+              ticket_number: ticket.ticket_number,
+              subject: ticket.title,
+              body: reply,
+              customer_email: ticket.customer_email,
+              workspace_id: ticket.workspace_id
+            })
+          });
+        } catch (notifyError) {
+          console.error('Failed to send email notification:', notifyError);
+        }
+      }
+
       setReply('');
       fetchMessages();
       toast.success(isInternal ? 'Internal note added' : 'Reply sent');
@@ -310,6 +330,22 @@ export default function TicketDetail() {
                     <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
                       {msg.body}
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-xs text-slate-400">
+                      {new Date(msg.created_at).toLocaleString()}
+                    </div>
+                    {ticket.customer_phone && (
+                      <a 
+                        href={`https://wa.me/${ticket.customer_phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg.body)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-[10px] font-bold text-[#25D366] hover:text-[#128C7E] transition-colors"
+                      >
+                        <Phone className="w-3 h-3" />
+                        Share to WhatsApp
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

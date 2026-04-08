@@ -10,7 +10,8 @@ import {
   ArrowLeft,
   Loader2,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  Phone
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -107,15 +108,26 @@ export default function PublicTrack() {
   return (
     <div className="min-h-screen bg-zuboc-cream/30 py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <Link to="/" className="flex items-center text-sm font-medium text-zuboc-plum/60 hover:text-zuboc-plum transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Link>
-          <div className="px-4 py-1.5 bg-zuboc-plum text-white text-xs font-bold rounded-full tracking-widest uppercase">
-            {token}
+          <div className="mb-8 flex items-center justify-between">
+            <Link to="/" className="flex items-center text-sm font-medium text-zuboc-plum/60 hover:text-zuboc-plum transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+            <div className="flex items-center space-x-3">
+              <a 
+                href={`https://wa.me/?text=${encodeURIComponent(`Track my Zuboc Desk ticket #${token}: https://zuboc-customerservice.vercel.app/track/${token}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center px-4 py-1.5 bg-[#25D366] text-white text-[10px] font-bold rounded-full tracking-widest uppercase hover:bg-[#128C7E] transition-colors"
+              >
+                <Phone className="w-3 h-3 mr-2" />
+                Share
+              </a>
+              <div className="px-4 py-1.5 bg-zuboc-plum text-white text-xs font-bold rounded-full tracking-widest uppercase">
+                {token}
+              </div>
+            </div>
           </div>
-        </div>
 
         <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-zuboc-plum/5 border border-zuboc-plum/5 overflow-hidden">
           <div className="p-10 md:p-16 border-b border-zuboc-plum/5">

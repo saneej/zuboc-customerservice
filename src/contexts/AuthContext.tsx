@@ -51,8 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       
-      // Bootstrap default admin if email matches
-      if (data.email === 'msaneejk4@gmail.com' && data.role !== 'admin') {
+      // Bootstrap default admin if email matches or if no admins exist
+      const { count: adminCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'admin');
+
+      if ((data.email === 'msaneejk4@gmail.com' || adminCount === 0) && data.role !== 'admin') {
         const { data: updatedData } = await supabase
           .from('profiles')
           .update({ role: 'admin' })

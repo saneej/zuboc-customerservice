@@ -165,7 +165,12 @@ export default function Home() {
         }),
       });
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        throw new Error('Server returned an invalid response. Please try again later.');
+      }
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to raise ticket');

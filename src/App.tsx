@@ -11,6 +11,8 @@ import KnowledgeBase from './pages/KnowledgeBase';
 import Customers from './pages/Customers';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
+import EmailSettings from './pages/EmailSettings';
+import CompanyProfile from './pages/CompanyProfile';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import { Toaster } from 'sonner';
@@ -97,6 +99,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/email"
+              element={
+                <ProtectedRoute>
+                  <EmailSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/company"
+              element={
+                <ProtectedRoute>
+                  <CompanyProfile />
                 </ProtectedRoute>
               }
             />

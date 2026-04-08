@@ -12,10 +12,14 @@ import {
   Search,
   Menu,
   X,
-  User as UserIcon
+  User as UserIcon,
+  Coffee,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -34,6 +38,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
 
   const filteredNavItems = navItems.filter(item => !item.adminOnly || profile?.role === 'admin');
+
+  const toggleAvailability = async () => {
+    if (!profile) return;
+    try {
+      const newStatus = !profile.is_available;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_available: newStatus })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+      toast.success(newStatus ? "You are now online" : "You are now on leave");
+      // The profile in AuthContext should update via realtime or manual refresh if implemented
+      // For now, we'll just reload to be sure
+      window.location.reload();
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -105,6 +128,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
+            {isSidebarOpen && (
+              <div className="mt-4 px-2">
+                <button 
+                  onClick={toggleAvailability}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                    profile?.is_available 
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20" 
+                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20"
+                  )}
+                >
+                  <div className="flex items-center">
+                    {profile?.is_available ? <CheckCircle2 className="w-3 h-3 mr-2" /> : <Coffee className="w-3 h-3 mr-2" />}
+                    {profile?.is_available ? 'Online' : 'On Leave'}
+                  </div>
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full animate-pulse",
+                    profile?.is_available ? "bg-emerald-400" : "bg-amber-400"
+                  )}></div>
+                </button>
+              </div>
+            )}
             <button
               onClick={handleSignOut}
               className={cn(

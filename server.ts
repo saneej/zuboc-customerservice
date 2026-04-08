@@ -39,7 +39,6 @@ async function startServer() {
       }
 
       // 1. Generate Ticket Number (ZUBXXXX)
-      // Get count of existing tickets to generate next number
       const { count, error: countError } = await supabase
         .from("tickets")
         .select("*", { count: "exact", head: true });
@@ -49,7 +48,31 @@ async function startServer() {
       const nextNumber = (count || 0) + 1001;
       const ticketNumber = `ZUB${nextNumber}`;
 
-      // 2. Insert into Supabase
+      // 2. Auto-assignment logic
+      let assignedTo = null;
+      try {
+        const { data: availableAgents, error: agentError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("workspace_id", workspace_id)
+          .eq("is_available", true)
+          .in("role", ["agent", "manager", "admin"])
+          .order("last_assigned_at", { ascending: true })
+          .limit(1);
+
+        if (!agentError && availableAgents && availableAgents.length > 0) {
+          assignedTo = availableAgents[0].id;
+          // Update last_assigned_at for the agent
+          await supabase
+            .from("profiles")
+            .update({ last_assigned_at: new Date().toISOString() })
+            .eq("id", assignedTo);
+        }
+      } catch (assignError) {
+        console.error("Auto-assignment failed:", assignError);
+      }
+
+      // 3. Insert into Supabase
       const { data, error: insertError } = await supabase
         .from("tickets")
         .insert([
@@ -65,8 +88,8 @@ async function startServer() {
             query_type,
             source: source || "web",
             attachments: attachments || [],
+            assigned_to: assignedTo,
             metadata: { 
-              // Keep metadata for any additional flexible fields
               created_via: "api"
             }
           },
@@ -76,16 +99,16 @@ async function startServer() {
 
       if (insertError) throw insertError;
 
-      // 3. Fetch Sender Email from Workspace Settings
+      // 4. Fetch Sender Email from Workspace Settings
       const { data: workspace, error: workspaceError } = await supabase
         .from("workspaces")
         .select("settings")
         .eq("id", workspace_id)
         .single();
 
-      const senderEmail = workspace?.settings?.sender_email || "hello@demomailtrap.co";
+      const senderEmail = workspace?.settings?.sender_email || "zuboc@vdermauae.com";
 
-      // 4. Send Email
+      // 5. Send Email
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || "smtp.ethereal.email",
         port: Number(process.env.SMTP_PORT) || 587,
@@ -155,17 +178,114 @@ async function startServer() {
         </html>
       `;
 
-      await transporter.sendMail({
-        from: `"Zuboc Desk" <${senderEmail}>`,
-        to: customer_email,
-        subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
-        html: htmlTemplate,
-      });
+      try {
+        await transporter.sendMail({
+          from: `"Zuboc Desk" <${senderEmail}>`,
+          to: customer_email,
+          subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
+          html: htmlTemplate,
+        });
+      } catch (emailErr) {
+        console.error("Email sending failed:", emailErr);
+      }
 
       res.json({ success: true, ticket: { ...data, ticket_number: ticketNumber } });
     } catch (error: any) {
       console.error("Error creating ticket:", error);
-      res.status(500).json({ error: error.message });
+      // Ensure we always return JSON
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          success: false,
+          error: error.message || "An internal server error occurred" 
+        });
+      }
+    }
+  });
+
+  // API Route for sending reply notifications
+  app.post("/api/notifications/reply", async (req, res) => {
+    const { ticket_id, body, customer_email, ticket_number, subject, workspace_id } = req.body;
+
+    try {
+      const { data: workspace } = await supabase
+        .from("workspaces")
+        .select("settings")
+        .eq("id", workspace_id)
+        .single();
+
+      const senderEmail = workspace?.settings?.sender_email || "zuboc@vdermauae.com";
+
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.ethereal.email",
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER || "mock_user",
+          pass: process.env.SMTP_PASS || "mock_pass",
+        },
+      });
+
+      const trackingUrl = `https://zuboc-customerservice.vercel.app/track/${ticket_number || ticket_id}`;
+
+      const htmlTemplate = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Inter', sans-serif; color: #312131; line-height: 1.6; background-color: #FDFBF7; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(49, 33, 49, 0.05); border: 1px solid rgba(49, 33, 49, 0.05); }
+            .header { background-color: #312131; padding: 40px; text-align: center; }
+            .content { padding: 40px; }
+            .footer { background-color: #FDFBF7; padding: 20px; text-align: center; font-size: 12px; color: rgba(49, 33, 49, 0.4); }
+            .logo { width: 80px; filter: invert(1) brightness(0); }
+            .ticket-badge { background-color: #FDFBF7; color: #312131; padding: 8px 16px; border-radius: 100px; font-weight: bold; display: inline-block; margin-bottom: 20px; border: 1px solid rgba(49, 33, 49, 0.1); }
+            h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 24px; margin-bottom: 20px; color: #312131; }
+            .message-box { background-color: #FDFBF7; padding: 20px; border-radius: 16px; border-left: 4px solid #312131; margin: 20px 0; }
+            .button { background-color: #312131; color: #ffffff !important; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <img src="https://zuboc.com/cdn/shop/files/zuboc_logo_1.svg?v=1748579899" alt="Zuboc Logo" class="logo" style="filter: invert(1) brightness(100);">
+            </div>
+            <div class="content">
+              <div class="ticket-badge">#${ticket_number || 'Ticket'}</div>
+              <h1>New Response from Zuboc Desk</h1>
+              <p>Hello,</p>
+              <p>Our team has responded to your ticket regarding <strong>"${subject}"</strong>:</p>
+              
+              <div class="message-box">
+                ${body}
+              </div>
+              
+              <p>You can view the full conversation and reply by clicking the button below:</p>
+              <a href="${trackingUrl}" class="button">View Ticket</a>
+            </div>
+            <div class="footer">
+              &copy; ${new Date().getFullYear()} Zuboc Desk. All rights reserved.
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await transporter.sendMail({
+        from: `"Zuboc Desk Support" <${senderEmail}>`,
+        to: customer_email,
+        subject: `Re: [${ticket_number}] ${subject}`,
+        html: htmlTemplate,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error sending reply notification:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          success: false,
+          error: error.message || "Failed to send notification" 
+        });
+      }
     }
   });
 

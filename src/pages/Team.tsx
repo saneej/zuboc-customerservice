@@ -221,6 +221,7 @@ export default function Team() {
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                   <th className="px-6 py-4">User</th>
+                  <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -252,6 +253,17 @@ export default function Team() {
                             <div className="text-sm font-bold text-slate-900">{p.full_name || 'No Name'}</div>
                             <div className="text-xs text-slate-500">{p.email}</div>
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full mr-2",
+                            p.is_available ? "bg-emerald-500" : "bg-amber-500"
+                          )}></div>
+                          <span className="text-xs font-medium text-slate-600">
+                            {p.is_available ? 'Online' : 'On Leave'}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

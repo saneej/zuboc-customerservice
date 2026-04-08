@@ -18,6 +18,7 @@ export interface Profile {
   avatar_url: string | null;
   role: UserRole;
   workspace_id: string | null;
+  is_available: boolean;
   created_at: string;
 }
 
