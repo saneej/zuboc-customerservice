@@ -32,7 +32,7 @@ async function startServer() {
   app.post("/api/tickets", async (req, res) => {
     console.log("Received ticket creation request:", req.body);
     try {
-      const { subject, description, customer_email, query_type, workspace_id, priority, source, attachments } = req.body;
+      const { subject, description, customer_email, customer_phone, query_type, workspace_id, priority, source, attachments } = req.body;
 
       if (!subject || !customer_email) {
         return res.status(400).json({ error: "Subject and customer email are required" });
@@ -61,6 +61,7 @@ async function startServer() {
             priority: priority || "medium",
             ticket_number: ticketNumber,
             customer_email,
+            customer_phone,
             query_type,
             source: source || "web",
             attachments: attachments || [],

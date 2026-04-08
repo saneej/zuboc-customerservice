@@ -8,12 +8,26 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. Create Enums
-CREATE TYPE user_role AS ENUM ('super_admin', 'admin', 'manager', 'agent', 'viewer', 'customer');
-CREATE TYPE ticket_status AS ENUM ('new', 'open', 'pending', 'on_hold', 'resolved', 'closed');
-CREATE TYPE ticket_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('super_admin', 'admin', 'manager', 'agent', 'viewer', 'customer');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE ticket_status AS ENUM ('new', 'open', 'pending', 'on_hold', 'resolved', 'closed');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE ticket_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- 3. Create Tables
-CREATE TABLE workspaces (
+CREATE TABLE IF NOT EXISTS workspaces (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
@@ -21,7 +35,7 @@ CREATE TABLE workspaces (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   full_name TEXT,
@@ -32,7 +46,7 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -40,13 +54,13 @@ CREATE TABLE teams (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE team_members (
+CREATE TABLE IF NOT EXISTS team_members (
   team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   PRIMARY KEY (team_id, profile_id)
 );
 
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -55,7 +69,7 @@ CREATE TABLE organizations (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE customers (
+CREATE TABLE IF NOT EXISTS customers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   organization_id UUID REFERENCES organizations(id),
@@ -68,12 +82,13 @@ CREATE TABLE customers (
   UNIQUE(workspace_id, email)
 );
 
-CREATE TABLE tickets (
+CREATE TABLE IF NOT EXISTS tickets (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
   ticket_number TEXT UNIQUE,
   customer_email TEXT,
+  customer_phone TEXT,
   query_type TEXT,
   source TEXT,
   title TEXT NOT NULL,
@@ -90,7 +105,7 @@ CREATE TABLE tickets (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE ticket_messages (
+CREATE TABLE IF NOT EXISTS ticket_messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
   author_id UUID REFERENCES profiles(id), -- If null, might be system or customer
@@ -101,7 +116,7 @@ CREATE TABLE ticket_messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE knowledge_base_categories (
+CREATE TABLE IF NOT EXISTS knowledge_base_categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -110,7 +125,7 @@ CREATE TABLE knowledge_base_categories (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE knowledge_base_articles (
+CREATE TABLE IF NOT EXISTS knowledge_base_articles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   category_id UUID REFERENCES knowledge_base_categories(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -121,7 +136,7 @@ CREATE TABLE knowledge_base_articles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE sla_policies (
+CREATE TABLE IF NOT EXISTS sla_policies (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -132,7 +147,7 @@ CREATE TABLE sla_policies (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,

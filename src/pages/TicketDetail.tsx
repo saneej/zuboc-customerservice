@@ -17,7 +17,8 @@ import {
   Loader2,
   ExternalLink,
   Plus,
-  MessageSquare
+  MessageSquare,
+  Phone
 } from 'lucide-react';
 import { supabase, Ticket, Profile } from '../lib/supabase';
 import { cn } from '../lib/utils';
@@ -399,6 +400,10 @@ export default function TicketDetail() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Phone</span>
+                <span className="font-medium text-slate-700">{ticket.customer_phone || 'Not provided'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400">Query Type</span>
                 <span className="font-medium text-slate-700">{ticket.query_type}</span>
               </div>
@@ -407,6 +412,20 @@ export default function TicketDetail() {
                 <span className="font-medium text-slate-700">{ticket.source}</span>
               </div>
             </div>
+
+            {ticket.customer_phone && (
+              <div className="mt-6">
+                <a 
+                  href={`https://wa.me/${ticket.customer_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello, I'm responding to your Zuboc Desk ticket #${ticket.ticket_number}.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#25D366] text-white rounded-xl text-xs font-bold hover:bg-[#128C7E] transition-all shadow-sm"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  Send via WhatsApp
+                </a>
+              </div>
+            )}
           </div>
 
           <div>

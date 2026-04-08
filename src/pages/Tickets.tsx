@@ -382,7 +382,12 @@ export default function Tickets() {
                     <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center mr-3">
                       <UserIcon className="w-4 h-4 text-slate-400" />
                     </div>
-                    <span className="text-sm text-slate-700">{ticket.customer_email || 'No Email'}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm text-slate-700">{ticket.customer_email || 'No Email'}</span>
+                      {ticket.customer_phone && (
+                        <span className="text-[10px] text-slate-400">{ticket.customer_phone}</span>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">

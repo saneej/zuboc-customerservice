@@ -32,6 +32,7 @@ export default function Home() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     subject: '',
     message: '',
     priority: 'medium',
@@ -156,6 +157,7 @@ export default function Home() {
           subject: formData.subject,
           description: formData.message,
           customer_email: formData.email,
+          customer_phone: formData.phone,
           query_type: formData.queryType,
           workspace_id: workspaceId,
           priority: formData.priority,
@@ -172,7 +174,7 @@ export default function Home() {
       setCreatedTicket({ number: result.ticket.ticket_number, email: formData.email });
       setShowSuccessModal(true);
       
-      setFormData({ name: '', email: '', subject: '', message: '', priority: 'medium', queryType: 'order' });
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '', priority: 'medium', queryType: 'order' });
       setSelectedFiles([]);
       generateCaptcha();
     } catch (err: any) {
@@ -388,6 +390,17 @@ export default function Home() {
                       placeholder="john@example.com"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="zuboc-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zuboc-plum/60 uppercase tracking-widest mb-3">Mobile Number</label>
+                    <input 
+                      type="tel" 
+                      required
+                      placeholder="+971 50 123 4567"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       className="zuboc-input"
                     />
                   </div>

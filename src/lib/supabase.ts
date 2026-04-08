@@ -33,6 +33,7 @@ export interface Ticket {
   workspace_id: string;
   ticket_number: string | null;
   customer_email: string | null;
+  customer_phone: string | null;
   query_type: string | null;
   source: string | null;
   attachments: string[] | null;
