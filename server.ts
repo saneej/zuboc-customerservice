@@ -133,6 +133,8 @@ async function startServer() {
       const senderEmail = workspace?.settings?.sender_email || "zuboc@vdermauae.com";
 
       // 5. Send Email
+      console.log(`Attempting to send email to ${customer_email} using ${process.env.SMTP_HOST || "smtp.ethereal.email"}`);
+      console.log(`SMTP Credentials: User=${process.env.SMTP_USER ? 'Set' : 'Not Set'}, Pass=${process.env.SMTP_PASS ? 'Set' : 'Not Set'}`);
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || "smtp.ethereal.email",
         port: Number(process.env.SMTP_PORT) || 587,
@@ -203,12 +205,13 @@ async function startServer() {
       `;
 
       try {
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
           from: `"Zuboc Desk" <${senderEmail}>`,
           to: customer_email,
           subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
           html: htmlTemplate,
         });
+        console.log("Email sent successfully:", info.messageId);
       } catch (emailErr) {
         console.error("Email sending failed:", emailErr);
       }
@@ -239,6 +242,7 @@ async function startServer() {
 
       const senderEmail = workspace?.settings?.sender_email || "zuboc@vdermauae.com";
 
+      console.log(`Attempting to send reply notification to ${customer_email} using ${process.env.SMTP_HOST || "smtp.ethereal.email"}`);
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || "smtp.ethereal.email",
         port: Number(process.env.SMTP_PORT) || 587,
@@ -294,12 +298,17 @@ async function startServer() {
         </html>
       `;
 
-      await transporter.sendMail({
-        from: `"Zuboc Desk Support" <${senderEmail}>`,
-        to: customer_email,
-        subject: `Re: [${ticket_number}] ${subject}`,
-        html: htmlTemplate,
-      });
+      try {
+        const info = await transporter.sendMail({
+          from: `"Zuboc Desk Support" <${senderEmail}>`,
+          to: customer_email,
+          subject: `Re: [${ticket_number}] ${subject}`,
+          html: htmlTemplate,
+        });
+        console.log("Reply notification sent successfully:", info.messageId);
+      } catch (emailErr) {
+        console.error("Reply email sending failed:", emailErr);
+      }
 
       res.json({ success: true });
     } catch (error: any) {
