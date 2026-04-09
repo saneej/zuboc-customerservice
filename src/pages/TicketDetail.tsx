@@ -36,6 +36,8 @@ export default function TicketDetail() {
   const [reply, setReply] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -95,10 +97,37 @@ export default function TicketDetail() {
   }
 
   const handleSendReply = async () => {
-    if (!reply.trim()) return;
+    if (!reply.trim() && selectedFiles.length === 0) return;
     setIsSubmitting(true);
 
     try {
+      // 1. Upload files if any
+      const attachmentUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        setUploadingFiles(true);
+        for (const file of selectedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `public/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('attachments')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(filePath);
+          
+          attachmentUrls.push(publicUrl);
+        }
+        setUploadingFiles(false);
+      }
+
       const { error } = await supabase
         .from('ticket_messages')
         .insert([
@@ -106,7 +135,8 @@ export default function TicketDetail() {
             ticket_id: id,
             author_id: currentUserProfile?.id,
             body: reply,
-            is_internal: isInternal
+            is_internal: isInternal,
+            attachments: attachmentUrls
           }
         ]);
 
@@ -133,6 +163,7 @@ export default function TicketDetail() {
       }
 
       setReply('');
+      setSelectedFiles([]);
       fetchMessages();
       toast.success(isInternal ? 'Internal note added' : 'Reply sent');
     } catch (error: any) {
@@ -330,6 +361,29 @@ export default function TicketDetail() {
                     <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
                       {msg.body}
                     </div>
+
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-100">
+                        <div className="flex flex-wrap gap-2">
+                          {msg.attachments.map((url: string, idx: number) => (
+                            <a 
+                              key={idx} 
+                              href={url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="group relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200"
+                            >
+                              <img 
+                                src={url} 
+                                alt="" 
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                referrerPolicy="no-referrer"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between mt-4">
                     <div className="text-xs text-slate-400">
@@ -396,25 +450,61 @@ export default function TicketDetail() {
                 />
                 <div className="flex items-center justify-between px-4 py-3 border-t border-inherit">
                   <div className="flex items-center space-x-2">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <input 
+                      type="file" 
+                      id="reply-attachment" 
+                      multiple 
+                      className="hidden" 
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setSelectedFiles(Array.from(e.target.files));
+                        }
+                      }}
+                    />
+                    <label 
+                      htmlFor="reply-attachment"
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    >
                       <Paperclip className="w-5 h-5" />
-                    </button>
+                    </label>
                     <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                       <TagIcon className="w-5 h-5" />
                     </button>
+                    
+                    {selectedFiles.length > 0 && (
+                      <span className="text-[10px] font-bold text-zuboc-plum bg-zuboc-cream px-2 py-1 rounded-full">
+                        {selectedFiles.length} files
+                      </span>
+                    )}
                   </div>
+                  <div className="flex items-center gap-3">
+                    {ticket.customer_phone && !isInternal && (
+                      <a 
+                        href={`https://wa.me/${ticket.customer_phone.replace(/\D/g, '')}?text=${encodeURIComponent(reply)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "flex items-center px-4 py-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all bg-[#25D366] hover:bg-[#128C7E]",
+                          (!reply.trim()) && "opacity-50 cursor-not-allowed pointer-events-none"
+                        )}
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        Send via WhatsApp
+                      </a>
+                    )}
                     <button 
                       onClick={handleSendReply}
-                      disabled={isSubmitting || !reply.trim()}
+                      disabled={isSubmitting || (!reply.trim() && selectedFiles.length === 0)}
                       className={cn(
                         "flex items-center px-4 py-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all",
                         isInternal ? "bg-amber-600 hover:bg-amber-700" : "bg-zuboc-plum hover:bg-zuboc-plum/90",
-                        (isSubmitting || !reply.trim()) && "opacity-50 cursor-not-allowed"
+                        (isSubmitting || (!reply.trim() && selectedFiles.length === 0)) && "opacity-50 cursor-not-allowed"
                       )}
                     >
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                       {isInternal ? 'Add Note' : 'Send Reply'}
                     </button>
+                  </div>
                 </div>
               </div>
             </div>

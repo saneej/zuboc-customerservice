@@ -47,12 +47,12 @@ async function startServer() {
       // Ensure we have a valid workspace_id
       let finalWorkspaceId = workspace_id;
       if (!finalWorkspaceId || finalWorkspaceId === '00000000-0000-0000-0000-000000000000') {
-        const { data: workspaces } = await supabase.from('workspaces').select('id').limit(1);
+        const { data: workspaces } = await supabaseAdmin.from('workspaces').select('id').limit(1);
         if (workspaces && workspaces.length > 0) {
           finalWorkspaceId = workspaces[0].id;
         } else {
           // Create default workspace if none exists
-          const { data: newWorkspace, error: wsError } = await supabase
+          const { data: newWorkspace, error: wsError } = await supabaseAdmin
             .from('workspaces')
             .insert([{ name: 'Default Workspace', slug: 'default' }])
             .select()
@@ -63,7 +63,7 @@ async function startServer() {
       }
 
       // 1. Generate Ticket Number (ZUBXXXX)
-      const { count, error: countError } = await supabase
+      const { count, error: countError } = await supabaseAdmin
         .from("tickets")
         .select("*", { count: "exact", head: true });
 
@@ -75,7 +75,7 @@ async function startServer() {
       // 2. Auto-assignment logic
       let assignedTo = null;
       try {
-        const { data: availableAgents, error: agentError } = await supabase
+        const { data: availableAgents, error: agentError } = await supabaseAdmin
           .from("profiles")
           .select("id")
           .eq("workspace_id", finalWorkspaceId)
@@ -87,7 +87,7 @@ async function startServer() {
         if (!agentError && availableAgents && availableAgents.length > 0) {
           assignedTo = availableAgents[0].id;
           // Update last_assigned_at for the agent
-          await supabase
+          await supabaseAdmin
             .from("profiles")
             .update({ last_assigned_at: new Date().toISOString() })
             .eq("id", assignedTo);
@@ -97,7 +97,7 @@ async function startServer() {
       }
 
       // 3. Insert into Supabase
-      const { data, error: insertError } = await supabase
+      const { data, error: insertError } = await supabaseAdmin
         .from("tickets")
         .insert([
           {
@@ -124,7 +124,7 @@ async function startServer() {
       if (insertError) throw insertError;
 
       // 4. Fetch Sender Email from Workspace Settings
-      const { data: workspace, error: workspaceError } = await supabase
+      const { data: workspace, error: workspaceError } = await supabaseAdmin
         .from("workspaces")
         .select("settings")
         .eq("id", finalWorkspaceId)
@@ -231,7 +231,7 @@ async function startServer() {
     const { ticket_id, body, customer_email, ticket_number, subject, workspace_id } = req.body;
 
     try {
-      const { data: workspace } = await supabase
+      const { data: workspace } = await supabaseAdmin
         .from("workspaces")
         .select("settings")
         .eq("id", workspace_id)
