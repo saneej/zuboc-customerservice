@@ -166,14 +166,16 @@ export default function Home() {
       });
 
       let result;
+      const text = await response.text();
       try {
-        result = await response.json();
+        result = JSON.parse(text);
       } catch (e) {
-        throw new Error('Server returned an invalid response. Please try again later.');
+        console.error('Invalid JSON response from server:', text);
+        throw new Error(`Server returned an invalid response (${response.status}). Please check the console for details.`);
       }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to raise ticket');
+        throw new Error(result.error || `Failed to raise ticket (Status: ${response.status})`);
       }
 
       setCreatedTicket({ number: result.ticket.ticket_number, email: formData.email });

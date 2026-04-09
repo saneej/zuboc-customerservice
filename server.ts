@@ -132,94 +132,99 @@ async function startServer() {
 
       const senderEmail = workspace?.settings?.sender_email || "zuboc@vdermauae.com";
 
-      // 5. Send Email
-      console.log(`Attempting to send email to ${customer_email} using ${process.env.SMTP_HOST || "smtp.ethereal.email"}`);
-      console.log(`SMTP Credentials: User=${process.env.SMTP_USER ? 'Set' : 'Not Set'}, Pass=${process.env.SMTP_PASS ? 'Set' : 'Not Set'}`);
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || "smtp.ethereal.email",
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER || "mock_user",
-          pass: process.env.SMTP_PASS || "mock_pass",
-        },
-      });
+      // 5. Send Email (Non-blocking to prevent timeouts)
+      const sendEmail = async () => {
+        console.log(`Attempting to send email to ${customer_email} using ${process.env.SMTP_HOST || "smtp.ethereal.email"}`);
+        console.log(`SMTP Credentials: User=${process.env.SMTP_USER ? 'Set' : 'Not Set'}, Pass=${process.env.SMTP_PASS ? 'Set' : 'Not Set'}`);
+        
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || "smtp.ethereal.email",
+            port: Number(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+              user: process.env.SMTP_USER || "mock_user",
+              pass: process.env.SMTP_PASS || "mock_pass",
+            },
+          });
 
-      const trackingUrl = `https://zuboc-customerservice.vercel.app/track/${ticketNumber}`;
+          const trackingUrl = `${req.protocol}://${req.get('host')}/track/${ticketNumber}`;
 
-      const htmlTemplate = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Inter', sans-serif; color: #312131; line-height: 1.6; background-color: #FDFBF7; padding: 20px; }
-            .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(49, 33, 49, 0.05); border: 1px solid rgba(49, 33, 49, 0.05); }
-            .header { background-color: #312131; padding: 40px; text-align: center; }
-            .content { padding: 40px; }
-            .footer { background-color: #FDFBF7; padding: 20px; text-align: center; font-size: 12px; color: rgba(49, 33, 49, 0.4); }
-            .logo { width: 80px; filter: invert(1) brightness(0); }
-            .ticket-badge { background-color: #FDFBF7; color: #312131; padding: 8px 16px; border-radius: 100px; font-weight: bold; display: inline-block; margin-bottom: 20px; border: 1px solid rgba(49, 33, 49, 0.1); }
-            h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 32px; margin-bottom: 10px; color: #312131; }
-            p { margin-bottom: 20px; }
-            .details { background-color: #FDFBF7; padding: 20px; border-radius: 16px; margin-top: 20px; }
-            .details-item { margin-bottom: 10px; font-size: 14px; }
-            .details-label { font-weight: bold; color: rgba(49, 33, 49, 0.6); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
-            .button { background-color: #312131; color: #ffffff !important; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <img src="https://zuboc.com/cdn/shop/files/zuboc_logo_1.svg?v=1748579899" alt="Zuboc Logo" class="logo" style="filter: invert(1) brightness(100);">
-            </div>
-            <div class="content">
-              <div class="ticket-badge">${ticketNumber}</div>
-              <h1>Ticket Registered</h1>
-              <p>Hello,</p>
-              <p>Thank you for reaching out to Zuboc Desk. We've received your request and our team is already on it.</p>
-              
-              <div class="details">
-                <div class="details-item">
-                  <div class="details-label">Subject</div>
-                  <div>${subject}</div>
+          const htmlTemplate = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: 'Inter', sans-serif; color: #312131; line-height: 1.6; background-color: #FDFBF7; padding: 20px; }
+                .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(49, 33, 49, 0.05); border: 1px solid rgba(49, 33, 49, 0.05); }
+                .header { background-color: #312131; padding: 40px; text-align: center; }
+                .content { padding: 40px; }
+                .footer { background-color: #FDFBF7; padding: 20px; text-align: center; font-size: 12px; color: rgba(49, 33, 49, 0.4); }
+                .logo { width: 80px; filter: invert(1) brightness(0); }
+                .ticket-badge { background-color: #FDFBF7; color: #312131; padding: 8px 16px; border-radius: 100px; font-weight: bold; display: inline-block; margin-bottom: 20px; border: 1px solid rgba(49, 33, 49, 0.1); }
+                h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 32px; margin-bottom: 10px; color: #312131; }
+                p { margin-bottom: 20px; }
+                .details { background-color: #FDFBF7; padding: 20px; border-radius: 16px; margin-top: 20px; }
+                .details-item { margin-bottom: 10px; font-size: 14px; }
+                .details-label { font-weight: bold; color: rgba(49, 33, 49, 0.6); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
+                .button { background-color: #312131; color: #ffffff !important; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <img src="https://zuboc.com/cdn/shop/files/zuboc_logo_1.svg?v=1748579899" alt="Zuboc Logo" class="logo" style="filter: invert(1) brightness(100);">
                 </div>
-                <div class="details-item">
-                  <div class="details-label">Query Type</div>
-                  <div>${query_type}</div>
+                <div class="content">
+                  <div class="ticket-badge">${ticketNumber}</div>
+                  <h1>Ticket Registered</h1>
+                  <p>Hello,</p>
+                  <p>Thank you for reaching out to Zuboc Desk. We've received your request and our team is already on it.</p>
+                  
+                  <div class="details">
+                    <div class="details-item">
+                      <div class="details-label">Subject</div>
+                      <div>${subject}</div>
+                    </div>
+                    <div class="details-item">
+                      <div class="details-label">Query Type</div>
+                      <div>${query_type}</div>
+                    </div>
+                    <div class="details-item">
+                      <div class="details-label">Source</div>
+                      <div>${source || 'Web'}</div>
+                    </div>
+                  </div>
+                  
+                  <p style="margin-top: 30px;">You can track your ticket status by clicking the button below:</p>
+                  <a href="${trackingUrl}" class="button">Track My Ticket</a>
                 </div>
-                <div class="details-item">
-                  <div class="details-label">Source</div>
-                  <div>${source || 'Web'}</div>
+                <div class="footer">
+                  &copy; ${new Date().getFullYear()} Zuboc Desk. All rights reserved.
                 </div>
               </div>
-              
-              <p style="margin-top: 30px;">You can track your ticket status by clicking the button below:</p>
-              <a href="${trackingUrl}" class="button">Track My Ticket</a>
-            </div>
-            <div class="footer">
-              &copy; ${new Date().getFullYear()} Zuboc Desk. All rights reserved.
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+            </body>
+            </html>
+          `;
 
-      try {
-        const info = await transporter.sendMail({
-          from: `"Zuboc Desk" <${senderEmail}>`,
-          to: customer_email,
-          subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
-          html: htmlTemplate,
-        });
-        console.log("Email sent successfully:", info.messageId);
-      } catch (emailErr) {
-        console.error("Email sending failed:", emailErr);
-      }
+          const info = await transporter.sendMail({
+            from: `"Zuboc Desk" <${senderEmail}>`,
+            to: customer_email,
+            subject: `Ticket Registered: ${ticketNumber} - ${subject}`,
+            html: htmlTemplate,
+          });
+          console.log("Email sent successfully:", info.messageId);
+        } catch (emailErr) {
+          console.error("Email sending failed:", emailErr);
+        }
+      };
+
+      // Start email sending in background
+      sendEmail();
 
       res.json({ success: true, ticket: { ...data, ticket_number: ticketNumber } });
     } catch (error: any) {
       console.error("Error creating ticket:", error);
-      // Ensure we always return JSON
       if (!res.headersSent) {
         res.status(500).json({ 
           success: false,

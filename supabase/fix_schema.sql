@@ -50,3 +50,27 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. Refresh PostgREST Cache (if possible)
 NOTIFY pgrst, 'reload schema';
+
+-- 6. Fix RLS Policies for Public Access
+ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to create a ticket (for the "Raise Ticket" form)
+DROP POLICY IF EXISTS "Allow public ticket creation" ON public.tickets;
+CREATE POLICY "Allow public ticket creation" ON public.tickets
+  FOR INSERT WITH CHECK (true);
+
+-- Allow anyone to read a ticket if they know the ticket number (for the "Track Ticket" page)
+DROP POLICY IF EXISTS "Allow public ticket tracking" ON public.tickets;
+CREATE POLICY "Allow public ticket tracking" ON public.tickets
+  FOR SELECT USING (true);
+
+-- Allow anyone to read messages for a ticket they can see
+ALTER TABLE public.ticket_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public message reading" ON public.ticket_messages;
+CREATE POLICY "Allow public message reading" ON public.ticket_messages
+  FOR SELECT USING (true);
+
+-- Allow anyone to add messages to a ticket (for the customer chat)
+DROP POLICY IF EXISTS "Allow public message creation" ON public.ticket_messages;
+CREATE POLICY "Allow public message creation" ON public.ticket_messages
+  FOR INSERT WITH CHECK (true);
