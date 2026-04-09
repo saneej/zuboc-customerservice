@@ -338,7 +338,17 @@ export async function createServer() {
         return res.status(400).json({ success: false, error: "Email and Full Name are required" });
       }
 
-      // 1. Generate a random password
+      // 1. Check if user already exists
+      const { data: userData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) throw listError;
+      
+      const userExists = userData?.users?.find((u: any) => u.email === email);
+      
+      if (userExists) {
+        return res.status(400).json({ success: false, error: "A user with this email already exists." });
+      }
+
+      // 2. Generate a random password
       const tempPassword = Math.random().toString(36).slice(-10) + "!";
 
       // 2. Create user in Supabase Auth
@@ -352,13 +362,19 @@ export async function createServer() {
       if (authError) throw authError;
 
       // 3. Update the profile with role and workspace
-      // The trigger handle_new_user should have already created the profile, 
-      // but we might need to update the role and workspace_id if it's not default.
+      let finalWorkspaceId = workspace_id;
+      if (!finalWorkspaceId) {
+        const { data: workspaces } = await supabaseAdmin.from('workspaces').select('id').limit(1);
+        if (workspaces && workspaces.length > 0) {
+          finalWorkspaceId = workspaces[0].id;
+        }
+      }
+
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .update({ 
           role: role || 'agent',
-          workspace_id: workspace_id,
+          workspace_id: finalWorkspaceId,
           full_name: fullName
         })
         .eq('id', authUser.user.id);
@@ -443,12 +459,65 @@ export async function createServer() {
       res.json({ success: true, user: authUser.user });
     } catch (error: any) {
       console.error("Error adding user:", error);
+      
+      // Detailed error logging
+      if (error.message) console.error("Error message:", error.message);
+      if (error.details) console.error("Error details:", error.details);
+      if (error.hint) console.error("Error hint:", error.hint);
+
       if (!res.headersSent) {
         res.status(500).json({ 
           success: false, 
           error: error.message || "Failed to create user and send email" 
         });
       }
+    }
+  });
+
+  // API Route for testing email configuration
+  app.post("/api/admin/test-email", async (req, res) => {
+    const { email } = req.body;
+    
+    try {
+      if (!email) {
+        return res.status(400).json({ success: false, error: "Recipient email is required" });
+      }
+
+      console.log(`Sending test email to ${email}...`);
+
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.ethereal.email",
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER || "mock_user",
+          pass: process.env.SMTP_PASS || "mock_pass",
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"Zuboc Desk Test" <zuboc@vdermauae.com>`,
+        to: email,
+        subject: `Test Email from Zuboc Desk`,
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #312131;">Email Configuration Test</h2>
+            <p>This is a test email to verify your SMTP settings for Zuboc Desk.</p>
+            <p>If you received this, your email configuration is working correctly!</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 12px; color: #666;">Sent at: ${new Date().toLocaleString()}</p>
+          </div>
+        `,
+      });
+
+      console.log("Test email sent successfully:", info.messageId);
+      res.json({ success: true, messageId: info.messageId });
+    } catch (error: any) {
+      console.error("Test email failed:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to send test email" 
+      });
     }
   });
 

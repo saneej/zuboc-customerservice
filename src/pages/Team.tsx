@@ -28,6 +28,8 @@ export default function Team() {
   const [workspace, setWorkspace] = useState<any>(null);
   const [senderEmail, setSenderEmail] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('msaneejk@gmail.com');
 
   useEffect(() => {
     fetchProfiles();
@@ -86,6 +88,38 @@ export default function Team() {
     }
   };
 
+  const handleTestEmail = async () => {
+    if (!testEmailRecipient) {
+      toast.error('Please enter a recipient email');
+      return;
+    }
+    
+    setIsTestingEmail(true);
+    try {
+      const response = await fetch('/api/admin/test-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: testEmailRecipient }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send test email');
+      }
+
+      toast.success(`Test email sent to ${testEmailRecipient}`);
+    } catch (error: any) {
+      toast.error(error.message);
+      console.error('Test email error:', error);
+    } finally {
+      setIsTestingEmail(true); // Keep it true for a bit or just reset
+      setTimeout(() => setIsTestingEmail(false), 2000);
+    }
+  };
+
   async function fetchProfiles() {
     try {
       setLoading(true);
@@ -122,7 +156,14 @@ export default function Team() {
         }),
       });
 
-      const result = await response.json();
+      let result;
+      const text = await response.text();
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        console.error('Invalid JSON response:', text);
+        throw new Error('Server returned an invalid response. Please check the logs.');
+      }
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to add agent');
@@ -362,6 +403,41 @@ export default function Team() {
                   {isSavingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   Save Changes
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-8">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Test Email Delivery</h3>
+                <p className="text-sm text-slate-500">Send a test email to verify your SMTP configuration.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recipient Email</label>
+                <div className="flex gap-3">
+                  <input 
+                    type="email"
+                    value={testEmailRecipient}
+                    onChange={(e) => setTestEmailRecipient(e.target.value)}
+                    placeholder="test@example.com"
+                    className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-zuboc-plum/20 outline-none"
+                  />
+                  <button 
+                    onClick={handleTestEmail}
+                    disabled={isTestingEmail}
+                    className="bg-emerald-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isTestingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                    Send Test
+                  </button>
+                </div>
               </div>
             </div>
           </div>
