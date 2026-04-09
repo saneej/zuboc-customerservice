@@ -161,47 +161,99 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 3.1 Automatic Profile Creation Trigger
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+DECLARE
+  default_workspace_id UUID;
+BEGIN
+  -- Get or create a default workspace
+  SELECT id INTO default_workspace_id FROM public.workspaces LIMIT 1;
+  
+  IF default_workspace_id IS NULL THEN
+    INSERT INTO public.workspaces (name, slug)
+    VALUES ('My Workspace', 'default-' || substr(md5(random()::text), 1, 6))
+    RETURNING id INTO default_workspace_id;
+  END IF;
+
+  INSERT INTO public.profiles (id, email, full_name, avatar_url, role, workspace_id)
+  VALUES (
+    new.id, 
+    new.email, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url',
+    CASE 
+      WHEN (SELECT COUNT(*) FROM public.profiles) = 0 OR new.email = 'msaneejk4@gmail.com' THEN 'admin'::user_role 
+      ELSE 'agent'::user_role 
+    END,
+    default_workspace_id
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Recreate trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- 4. Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_messages ENABLE ROW LEVEL SECURITY;
 
--- Simple Policy: Users can see data in their workspace
-CREATE POLICY "Workspace Access" ON profiles
-  FOR ALL USING (workspace_id IN (SELECT workspace_id FROM profiles WHERE id = auth.uid()));
+-- Helper function to avoid recursion in policies
+CREATE OR REPLACE FUNCTION public.get_my_workspace()
+RETURNS uuid AS $$
+  SELECT workspace_id FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
 
+-- Simple Policy: Users can see data in their workspace
+DROP POLICY IF EXISTS "Workspace Access" ON profiles;
+CREATE POLICY "Workspace Access" ON profiles
+  FOR ALL USING (id = auth.uid() OR workspace_id = public.get_my_workspace());
+
+DROP POLICY IF EXISTS "Ticket Access" ON tickets;
 CREATE POLICY "Ticket Access" ON tickets
-  FOR ALL USING (workspace_id IN (SELECT workspace_id FROM profiles WHERE id = auth.uid()));
+  FOR ALL USING (workspace_id = public.get_my_workspace());
+
+DROP POLICY IF EXISTS "Message Access" ON ticket_messages;
+CREATE POLICY "Message Access" ON ticket_messages
+  FOR ALL USING (ticket_id IN (SELECT id FROM tickets WHERE workspace_id = public.get_my_workspace()));
 
 -- 5. Realtime
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-        AND schemaname = 'public' 
-        AND tablename = 'tickets'
-    ) THEN
+    -- Add tickets table
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE tickets;
-    END IF;
+    EXCEPTION
+        WHEN duplicate_object THEN
+            RAISE NOTICE 'Table tickets is already in publication supabase_realtime';
+        WHEN others THEN
+            RAISE NOTICE 'Error adding tickets to publication: %', SQLERRM;
+    END;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-        AND schemaname = 'public' 
-        AND tablename = 'ticket_messages'
-    ) THEN
+    -- Add ticket_messages table
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE ticket_messages;
-    END IF;
+    EXCEPTION
+        WHEN duplicate_object THEN
+            RAISE NOTICE 'Table ticket_messages is already in publication supabase_realtime';
+        WHEN others THEN
+            RAISE NOTICE 'Error adding ticket_messages to publication: %', SQLERRM;
+    END;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-        AND schemaname = 'public' 
-        AND tablename = 'notifications'
-    ) THEN
+    -- Add notifications table
+    BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
-    END IF;
+    EXCEPTION
+        WHEN duplicate_object THEN
+            RAISE NOTICE 'Table notifications is already in publication supabase_realtime';
+        WHEN others THEN
+            RAISE NOTICE 'Error adding notifications to publication: %', SQLERRM;
+    END;
 END $$;
 
 -- 6. Storage Setup
@@ -211,11 +263,13 @@ VALUES ('attachments', 'attachments', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow public access to read attachments
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access"
 ON storage.objects FOR SELECT
 USING ( bucket_id = 'attachments' );
 
 -- Allow authenticated users to upload attachments
+DROP POLICY IF EXISTS "Authenticated Upload" ON storage.objects;
 CREATE POLICY "Authenticated Upload"
 ON storage.objects FOR INSERT
 WITH CHECK ( bucket_id = 'attachments' );

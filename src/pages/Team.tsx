@@ -109,14 +109,27 @@ export default function Team() {
     setIsSubmitting(true);
     
     try {
-      // In a real app, you'd use a server-side function to create the auth user.
-      // For this demo, we'll inform the admin that the agent needs to sign up.
-      toast.info(`Agent account for ${newAgent.email} initialized. Please ask them to sign up with this email.`);
-      
-      // We could pre-create the profile here if we had a way to know the ID, 
-      // but Supabase profiles are linked to auth.users.id.
-      // So we'll just close the modal for now.
-      
+      const response = await fetch('/api/admin/add-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: newAgent.email,
+          fullName: newAgent.fullName,
+          role: 'agent',
+          workspace_id: workspace?.id
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add agent');
+      }
+
+      toast.success(`Welcome email sent to ${newAgent.email}`);
+      fetchProfiles(); // Refresh the list
       setShowAddModal(false);
       setNewAgent({ email: '', fullName: '' });
     } catch (error: any) {
