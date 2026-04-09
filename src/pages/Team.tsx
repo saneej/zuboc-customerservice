@@ -155,6 +155,22 @@ export default function Team() {
     }
   };
 
+  const toggleAgentAvailability = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_available: !currentStatus })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      setProfiles(profiles.map(p => p.id === userId ? { ...p, is_available: !currentStatus } : p));
+      toast.success(`Agent is now ${!currentStatus ? 'Online' : 'On Leave'}`);
+    } catch (error: any) {
+      toast.error('Failed to update status');
+    }
+  };
+
   const filteredProfiles = profiles.filter(p => 
     p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -269,7 +285,10 @@ export default function Team() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
+                        <button 
+                          onClick={() => toggleAgentAvailability(p.id, p.is_available)}
+                          className="flex items-center hover:bg-slate-100 p-1 rounded transition-colors"
+                        >
                           <div className={cn(
                             "w-2 h-2 rounded-full mr-2",
                             p.is_available ? "bg-emerald-500" : "bg-amber-500"
@@ -277,7 +296,7 @@ export default function Team() {
                           <span className="text-xs font-medium text-slate-600">
                             {p.is_available ? 'Online' : 'On Leave'}
                           </span>
-                        </div>
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <select 

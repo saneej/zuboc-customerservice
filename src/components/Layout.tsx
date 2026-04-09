@@ -50,9 +50,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       toast.success(newStatus ? "You are now online" : "You are now on leave");
-      // The profile in AuthContext should update via realtime or manual refresh if implemented
-      // For now, we'll just reload to be sure
-      window.location.reload();
     } catch (error) {
       toast.error("Failed to update status");
     }

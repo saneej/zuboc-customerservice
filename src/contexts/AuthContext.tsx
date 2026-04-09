@@ -38,8 +38,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Realtime listener for profile updates
+    let profileSubscription: any;
+    if (user) {
+      profileSubscription = supabase
+        .channel('profile-updates')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        }, (payload) => {
+          setProfile(payload.new as Profile);
+        })
+        .subscribe();
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      if (profileSubscription) profileSubscription.unsubscribe();
+    };
+  }, [user?.id]);
 
   async function fetchProfile(userId: string) {
     try {
